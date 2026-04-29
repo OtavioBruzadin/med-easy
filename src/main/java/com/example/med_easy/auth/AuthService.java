@@ -46,10 +46,10 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.email().trim().toLowerCase())
-                .orElseThrow(() -> new BadCredentialsException("Email ou senha inválidos"));
+                .orElseThrow(() -> new BadCredentialsException("Email inválido"));
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Email ou senha inválidos");
+            throw new BadCredentialsException("Senha inválida");
         }
 
         String token = jwtService.generateToken(user.getEmail());
