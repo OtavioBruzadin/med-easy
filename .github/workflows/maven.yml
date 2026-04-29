@@ -13,6 +13,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      MONGO_URI: mongodb://localhost:27017/med-easy-test
+      MONGO_DATABASE: med-easy-test
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,7 +36,20 @@ jobs:
           cache: maven
 
       - name: Build + tests
-        run: mvn -B clean verify
+        run: mvn -B clean verify -e
+
+      - name: Show Surefire reports
+        if: failure()
+        run: |
+          ls -la target/surefire-reports || true
+          cat target/surefire-reports/*.txt || true
+
+      - name: Upload Surefire reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
 
   dependency-submission:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
