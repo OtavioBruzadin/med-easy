@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.med_easy.auth.dto.AuthResponse;
 import com.example.med_easy.auth.dto.LoginRequest;
+import com.example.med_easy.auth.dto.RefreshTokenRequest;
 import com.example.med_easy.auth.security.JwtService;
 import com.example.med_easy.user.User;
 import com.example.med_easy.user.UserRepository;
@@ -57,9 +58,9 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginShouldReturnValidJwtToken() {
+    void loginShouldReturnAccessAndRefreshTokens() {
         String secret = "9f8c2a7e6b4d1c3a8e5f0d9b7a6c2e1f4a8b9c7d6e5f1a2b3c4d5e6f7a8b9c0d";
-        JwtService realJwtService = new JwtService(secret, 3600L);
+        JwtService realJwtService = new JwtService(secret, 3600L, 604800L);
 
         AuthService realAuthService = new AuthService(
                 userRepository,
@@ -77,20 +78,79 @@ class AuthServiceTest {
         AuthResponse response = realAuthService.login(request);
 
         assertNotNull(response.accessToken());
+        assertNotNull(response.refreshToken());
         assertTrue(response.accessToken().split("\\.").length == 3);
+        assertTrue(response.refreshToken().split("\\.").length == 3);
+
         assertEquals("Bearer", response.tokenType());
         assertEquals(3600L, response.expiresIn());
+        assertEquals(604800L, response.refreshExpiresIn());
 
-        Claims claims = Jwts.parser()
+        Claims accessClaims = Jwts.parser()
                 .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .build()
                 .parseSignedClaims(response.accessToken())
                 .getPayload();
 
-        assertEquals("otavio@email.com", claims.getSubject());
-        assertNotNull(claims.getIssuedAt());
-        assertNotNull(claims.getExpiration());
-        assertTrue(claims.getExpiration().toInstant().isAfter(Instant.now()));
+        assertEquals("otavio@email.com", accessClaims.getSubject());
+        assertEquals("access", accessClaims.get("token_use", String.class));
+        assertNotNull(accessClaims.getIssuedAt());
+        assertNotNull(accessClaims.getExpiration());
+        assertTrue(accessClaims.getExpiration().toInstant().isAfter(Instant.now()));
+
+        Claims refreshClaims = Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
+                .build()
+                .parseSignedClaims(response.refreshToken())
+                .getPayload();
+
+        assertEquals("otavio@email.com", refreshClaims.getSubject());
+        assertEquals("refresh", refreshClaims.get("token_use", String.class));
+        assertNotNull(refreshClaims.getIssuedAt());
+        assertNotNull(refreshClaims.getExpiration());
+        assertTrue(refreshClaims.getExpiration().toInstant().isAfter(Instant.now()));
+    }
+
+    @Test
+    void refreshTokenShouldReturnNewAccessAndRefreshTokens() {
+        String secret = "9f8c2a7e6b4d1c3a8e5f0d9b7a6c2e1f4a8b9c7d6e5f1a2b3c4d5e6f7a8b9c0d";
+        JwtService realJwtService = new JwtService(secret, 3600L, 604800L);
+
+        AuthService realAuthService = new AuthService(
+                userRepository,
+                passwordEncoder,
+                realJwtService
+        );
+
+        when(userRepository.findByEmailIgnoreCase("otavio@email.com"))
+                .thenReturn(Optional.of(existingUser));
+
+        String validRefreshToken = realJwtService.generateRefreshToken("otavio@email.com");
+
+        AuthResponse response = realAuthService.refreshToken(new RefreshTokenRequest(validRefreshToken));
+
+        assertNotNull(response.accessToken());
+        assertNotNull(response.refreshToken());
+        assertEquals("Bearer", response.tokenType());
+        assertEquals(3600L, response.expiresIn());
+        assertEquals(604800L, response.refreshExpiresIn());
+    }
+
+    @Test
+    void refreshTokenShouldThrowBadCredentialsExceptionWhenTokenIsInvalid() {
+        String secret = "9f8c2a7e6b4d1c3a8e5f0d9b7a6c2e1f4a8b9c7d6e5f1a2b3c4d5e6f7a8b9c0d";
+        JwtService realJwtService = new JwtService(secret, 3600L, 604800L);
+
+        AuthService realAuthService = new AuthService(
+                userRepository,
+                passwordEncoder,
+                realJwtService
+        );
+
+        assertThrows(
+                BadCredentialsException.class,
+                () -> realAuthService.refreshToken(new RefreshTokenRequest("token-invalido"))
+        );
     }
 
     @Test

@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.med_easy.auth.dto.AuthResponse;
 import com.example.med_easy.auth.dto.LoginRequest;
+import com.example.med_easy.auth.dto.RefreshTokenRequest;
 import com.example.med_easy.auth.dto.SignupRequest;
-import com.example.med_easy.auth.dto.SignupResponse;
 
 import jakarta.validation.Valid;
 
@@ -22,7 +22,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
-    public SignupResponse signup(@Valid @RequestBody SignupRequest request) {
+    public AuthResponse signup(@Valid @RequestBody SignupRequest request) {
         return authService.signup(request);
     }
 
@@ -30,5 +30,11 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/refresh")
+    @ResponseStatus(HttpStatus.OK)
+    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refreshToken(request);
     }
 }

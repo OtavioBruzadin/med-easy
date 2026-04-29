@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.med_easy.auth.dto.AuthResponse;
 import com.example.med_easy.auth.dto.LoginRequest;
+import com.example.med_easy.auth.dto.RefreshTokenRequest;
 import com.example.med_easy.auth.dto.SignupRequest;
-import com.example.med_easy.auth.dto.SignupResponse;
 import com.example.med_easy.auth.security.JwtService;
 import com.example.med_easy.user.User;
 import com.example.med_easy.user.UserRepository;
@@ -27,7 +27,7 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public SignupResponse signup(SignupRequest request) {
+    public AuthResponse signup(SignupRequest request) {
         if (userRepository.existsByEmailIgnoreCase(request.email())) {
             throw new IllegalArgumentException("Email já cadastrado");
         }
@@ -40,8 +40,7 @@ public class AuthService {
         );
 
         User saved = userRepository.save(user);
-
-        return new SignupResponse(saved.getId(), saved.getName(), saved.getEmail());
+        return buildAuthResponse(saved.getEmail());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -52,7 +51,34 @@ public class AuthService {
             throw new BadCredentialsException("Senha inválida");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
-        return new AuthResponse(token, "Bearer", jwtService.getExpirationSeconds());
+        return buildAuthResponse(user.getEmail());
+    }
+
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken();
+
+        if (!jwtService.isRefreshTokenValid(refreshToken)) {
+            throw new BadCredentialsException("Refresh token inválido");
+        }
+
+        String email = jwtService.extractSubject(refreshToken);
+
+        userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BadCredentialsException("Usuário não encontrado"));
+
+        return buildAuthResponse(email);
+    }
+
+    private AuthResponse buildAuthResponse(String email) {
+        String accessToken = jwtService.generateAccessToken(email);
+        String refreshToken = jwtService.generateRefreshToken(email);
+
+        return new AuthResponse(
+                accessToken,
+                refreshToken,
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                jwtService.getRefreshExpirationSeconds()
+        );
     }
 }
