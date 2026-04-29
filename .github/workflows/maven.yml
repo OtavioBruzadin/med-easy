@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_SECRET: 9f8c2a7e6b4d1c3a8e5f0d9b7a6c2e1f4a8b9c7d6e5f1a2b3c4d5e6f7a8b9c0d
       MONGO_URI: mongodb://localhost:27017/med-easy-test
       MONGO_DATABASE: med-easy-test
 
