@@ -23,7 +23,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: med-easy-secret
-                  key: MONGO_URI
+                  key: MONGODB_URI
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
