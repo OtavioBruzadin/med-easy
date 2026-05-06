@@ -1,31 +1,13 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
-  name: med-easy
+  name: med-easy-service
 spec:
-  replicas: 2
   selector:
-    matchLabels:
-      app: med-easy
-  template:
-    metadata:
-      labels:
-        app: med-easy
-    spec:
-      containers:
-        - name: med-easy
-          image: bruzadinotavio/med-easy:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-          env:
-            - name: MONGODB_URI
-              valueFrom:
-                secretKeyRef:
-                  name: med-easy-secret
-                  key: MONGODB_URI
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: med-easy-secret
-                  key: JWT_SECRET
+    app: med-easy
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort
