@@ -19,7 +19,7 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            - name: MONGO_URI
+            - name: MONGODB_URI
               valueFrom:
                 secretKeyRef:
                   name: med-easy-secret
